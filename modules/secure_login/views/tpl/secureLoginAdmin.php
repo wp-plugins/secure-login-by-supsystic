@@ -1,4 +1,4 @@
-<?php //var_dump(frameSln::_()->getModule('options')->get('captcha_type')); ?>
+<?php //var_dump($this->options['email_auth_roles']); ?>
 <section class="supsystic-bar">
 	<ul class="supsystic-bar-controls">
 		<li title="<?php _e('Save all options')?>">
@@ -50,6 +50,30 @@
 						<td class="col-w-60perc">
 							<div id="slnFormOptDetails_<?php echo $optKey?>" class="slnOptDetailsShell">
 							<?php switch($optKey) {
+								case 'email_auth_enb': ?>
+									<label>
+										<?php _e('Enable option for: ', SLN_LANG_CODE)?>
+										<?php echo htmlSln::selectbox('opt_values[email_auth_opt_for_roles]', array(
+											'options' => $this->emailAuthForRoles,
+											'value' => $this->options['email_auth_opt_for_roles']['value']
+										)); ?>
+									</label>
+									<?php if($this->options['email_auth_opt_for_roles']['value'] == "specify"):?>
+										<label id="scrLoginEmailAuthData">
+											<br />
+											<?php _e('Select role(s) for which two-factor email authentication will be available', SLN_LANG_CODE)?><br />
+											<?php foreach($this->usersRoles as $role):?>
+												<?php
+												echo htmlSln::checkbox('opt_values[email_auth_roles][]', array(
+													'value' => $role['name'],
+													'checked' => in_array($role['name'], $this->options['email_auth_roles']['value'])
+												));
+												echo ' '.$role['name'];
+												?><br />
+											<?php endforeach;?>
+										</label>
+									<?php endif;?>
+									<?php break;
 								case 'htaccess_passwd_enable': ?>
 								<label>
 									<div style="float: left; width: 110px; line-height: 26px;"><?php _e('htaccess login', SLN_LANG_CODE)?>:</div>
@@ -118,6 +142,18 @@
 											'value' => $this->options['captcha_type']['value']
 										)); ?>
 									</label>
+									<?php if($this->options['captcha_type']['value'] == "recaptcha"):?>
+										<label id="scrLoginRecaptchaData">
+											<br />
+											<?php _e('Enter site key and secret key, that you get after ', SLN_LANG_CODE)?>
+											<a href="https://www.google.com/recaptcha/admin#list"><?php _e('registration', SLN_LANG_CODE)?></a><br />
+											<?php _e('reCaptcha site key:', SLN_LANG_CODE)?>
+											<?php echo htmlSln::text('opt_values[recaptcha_sitekey]', array('value' => $this->options['recaptcha_sitekey']['value'], 'attrs'=>'size=45'));?>
+											<br />
+											<?php _e('reCaptcha secret key:', SLN_LANG_CODE)?>
+											<?php echo htmlSln::text('opt_values[recaptcha_secret]', array('value' => $this->options['recaptcha_secret']['value'], 'attrs'=>'size=45'));?>
+										</label>
+									<?php endif;?>
 									<?php break;
 							}?>
 							<?php

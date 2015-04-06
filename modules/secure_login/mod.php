@@ -1,5 +1,7 @@
 <?php
 class secure_loginSln extends moduleSln {
+	private $_cookieName = 'sln_email_auth_cookie';
+	private $_cookieSecureName = 'sln_email_auth_cookie_secure';
     public $imgPath = '';
     public $imgName = '';
 	public $captchaType = '';
@@ -17,6 +19,8 @@ class secure_loginSln extends moduleSln {
 		add_action('user_profile_update_errors', array($this, 'resetRemoveChangePassMsg'), 99, 3);
 		add_filter('login_errors', array($this, 'checkLoginErrorDisable'));
 		add_action('plugins_loaded', array($this, 'checkLoginPageRestrict'), 1);
+		add_action('clear_auth_cookie', array($this, 'clearCookie'));
+		add_action('init', array($this, 'checkEmailAuth'), 99);
 		$this->captchaType = frameSln::_()->getModule('options')->get('captcha_type');
 		if($this->captchaType == "custom") {
 			$this->imgName = 'login-captcha-1.png';
@@ -38,6 +42,11 @@ class secure_loginSln extends moduleSln {
 		$opts[ $this->getCode() ] = array(
 			'label' => __('Login Security', SLN_LANG_CODE),
 			'opts' => array(
+				'email_auth_enb' => array('label' => __('Email Authentication', SLN_LANG_CODE), 'weight' => 75, 'html' => 'checkboxHiddenVal', 'desc' => __('Enable 2 step authentication via email.', SLN_LANG_CODE)),
+				'email_auth_opt_for_roles' => array('label' => __('Email authentication option is available for roles', SLN_LANG_CODE), 'def'=>'all'),
+				'email_auth_roles' => array('label' => __('Enable email authentication for roles', SLN_LANG_CODE)),
+				'email_auth_crypt_time' => array('label' => __('Timestamp to encrypt cookies', SLN_LANG_CODE)),
+
 				'capcha_on_login' => array('label' => __('Capcha on login', SLN_LANG_CODE), 'weight' => 70, 'html' => 'checkboxHiddenVal', 'desc' => __("CAPTCHA is one of the most effective means against automatic password selection, the so called broot force. Of course, CAPTCHA creates a certain inconvenience for a user that needs to write it down correctly. That’s why we use the verified reCapcha from Google that is complicated for bots and simple for humans.<p><img src={$this->imgPath}>", SLN_LANG_CODE)),
 				
 				'htaccess_passwd_enable' => array('label' => __('Anti BrootForce second password', SLN_LANG_CODE), 'weight' => 65, 'html' => 'checkboxHiddenVal', 'htaccessChange' => true, 'forBothHtaccess' => true, 'desc' => __('A simple and effective tool that allows you to reduce the probability of guessing a password brute force and at the same time protect the load associated with such an attack.', SLN_LANG_CODE)),
@@ -63,12 +72,14 @@ class secure_loginSln extends moduleSln {
 				'admin_pass_change_auto' => array('label' => __('Do it auto', SLN_LANG_CODE), 'def' => '0'),
 				'admin_pass_change_last_check' => array('label' => __('Do it auto', SLN_LANG_CODE), 'def' => '0'),
 				// enb == enable
-				'hide_login_errors_enb' => array('label' => __('Hide login error messages', SLN_LANG_CODE), 'weight' => 20, 'html' => 'checkboxHiddenVal', 'desc' => __('Will not display errors on login form if login was incorrect.', SLN_LANG_CODE)),
+				'hide_login_errors_enb' => array('label' => __('Hide login error messages', SLN_LANG_CODE), 'weight' => 30, 'html' => 'checkboxHiddenVal', 'desc' => __('Will not display errors on login form if login was incorrect.', SLN_LANG_CODE)),
 				// enb == enable
 				'hide_login_page_enb' => array('label' => __('Hide login page', SLN_LANG_CODE), 'weight' => 30, 'html' => 'checkboxHiddenVal', 'htaccessChange' => true, 'desc' => __('The attacker will not know the address of the page to log in to your site - this will reduce the risk of breaking of site.', SLN_LANG_CODE)),
 				'hide_login_page_slug' => array('label' => __('New login slug', SLN_LANG_CODE), 'def' => ''),
 
 				'captcha_type' => array('label' => __('Captcha type', SLN_LANG_CODE), 'def' => 'custom'),
+				'recaptcha_sitekey' => array('label' => __('reCaptcha sitekey', SLN_LANG_CODE), 'def' => ''),
+				'recaptcha_secret' => array('label' => __('reCaptcha secret', SLN_LANG_CODE), 'def' => ''),
 			),
 		);
 		return $opts;
@@ -189,8 +200,9 @@ class secure_loginSln extends moduleSln {
 		return $req;
 	}
 	public function noCaptchaRecaptchaCheckAnsw($privateKey, $host, $captcha) {
-		$response=file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$privateKey."&response=".$captcha."&remoteip=".$host);
-		if($response.success == false) {
+		$response = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$privateKey."&response=".$captcha."&remoteip=".$host);
+		$response = json_decode($response, true);
+		if($response['success'] == false) {
 			return false;
 		} else {
 			return true;
@@ -332,5 +344,83 @@ class secure_loginSln extends moduleSln {
 	public function checkLoginPageRestrict() {
 		
 	}
+	public function checkEmailAuth() {
+		if(!$this->emailAuthEnabled())
+			return;
+		if(is_user_logged_in() && $this->emailCheckRoleEntry() && !$this->emailAuthAuthenticated() && !$this->isAllowedMethods()){
+			$errors = array();
+			if(!$this->getModel()->loginMailWasSent()) {
+				if(!$this->getModel()->sendLoginMail()) {
+					$errors = $this->getModel()->getErrors();
+				}
+			}
+			$this->getView()->showEmailLoginForm( $errors );
+			exit();
+		} else {
+			return;
+		}
+	}
+	// Some allowed methods - for this module functionality usage
+	public function isAllowedMethods() {
+		if(frameSln::_()->getExecMod() == 'secure_login') {
+			$allowedMethods = $this->getController()->getAuthPermissions();
+			$execAction = frameSln::_()->getExecAction();
+			if(in_array($execAction, $allowedMethods[ SLN_USERLEVELS ][ SLN_ADMIN ])
+				/*&& !in_array($execAction, array('sendTest'))*/
+			) {
+				return true;
+			}
+		}
+		return false;
+	}
+	public function emailAuthEnabled() {
+		if(frameSln::_()->getModule('options')->get('email_auth_enb')) {
+				return true;
+		}
+		return false;
+	}
+	public function emailCheckRoleEntry() {
+		$optForRoles = frameSln::_()->getModule('options')->get('email_auth_opt_for_roles');
+		if($optForRoles == 'specify') {
+			global $current_user;
+			$role = $current_user->roles[0];
+			$tmp = frameSln::_()->getModule('options')->get('email_auth_roles');
+			$roles = array();
+			for($i=0;$i<count($tmp);$i++) {
+				$roles[] = strtolower($tmp[$i]);
+			}
+			return in_array($role, $roles);
+		} else {
+			return true;
+		}
+	}
+	public function emailAuthAuthenticated() {
+		if(isset($_COOKIE[$this->_cookieName])){
+			$data = utilsSln::decrypt($_COOKIE[$this->_cookieName], md5($this->_cookieSecureName));
+			$tm = $data['tm'];
+			$cryptTime = frameSln::_()->getModule('options')->get('email_auth_crypt_time');
+			if($tm == $cryptTime) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	public function emailSetAuthAuthenticated() {
+		frameSln::_()->getModule('options')->getModel()->save('email_auth_crypt_time', time());
+		$secureCookieHash = utilsSln::encrypt(
+			array('tm' => frameSln::_()->getModule('options')->get('email_auth_crypt_time')),
+			md5($this->_cookieSecureName)
+		);
+		if(setcookie($this->_cookieName, $secureCookieHash, time()+(24*3600))) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	public function clearCookie() {
+		setcookie($this->_cookieName);
+	}
 }
-

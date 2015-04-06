@@ -33,10 +33,11 @@ jQuery(document).ready(function(){
 		,	loadComplete: function() {
 				if (this.p.reccount === 0) {
 					jQuery(this).hide();
-					jQuery('#slnClearStats').remove();
+                    jQuery('#slnClearStats').hide();
 					jQuery('#slnDetailedLoginTblEmptyMsg').show();
 				} else {
 					jQuery(this).show();
+                    jQuery('#slnClearStats').show();
 					jQuery('#slnDetailedLoginTblEmptyMsg').hide();
 				}
 			}

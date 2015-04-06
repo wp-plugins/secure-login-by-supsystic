@@ -3,7 +3,7 @@
  * Plugin Name: Secure Login by Supsystic
  * Plugin URI: http://supsystic.com
  * Description: Secure login with Google captha, login logs and brute force attack protection. Temporary and permanent blacklists for more login security
- * Version: 1.0.3
+ * Version: 1.1
  * Author: supsystic.com
  * Author URI: http://supsystic.com
  **/

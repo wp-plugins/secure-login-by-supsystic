@@ -27,10 +27,41 @@ class secure_loginControllerSln extends controllerSln {
 			$res->pushError (__('Empty IP list', SLN_LANG_CODE));
 		$res->ajaxExec();
 	}
+	public function checkAuthCode() {
+		$res = new responseSln();
+		if($this->getModel()->checkAuthCode(reqSln::getVar('auth_code', 'post'))) {
+			$res->addMessage(__('Done', SLN_LANG_CODE));
+		} else
+			$res->pushError ($this->getModel()->getErrors());
+		$res->ajaxExec();
+	}
+	public function logout() {
+		$res = new responseSln();
+		if($this->getModel()->logout()) {
+			$res->addMessage(__('Done', SLN_LANG_CODE));
+		} else
+			$res->pushError ($this->getModel()->getErrors());
+		$res->ajaxExec();
+	}
+	public function resendCode() {
+		$res = new responseSln();
+		if($this->getModel()->sendLoginMail()) {
+			$res->addMessage(__('New code was sent', SLN_LANG_CODE));
+		} else
+			$res->pushError ($this->getModel()->getErrors());
+		$res->ajaxExec();
+	}
 	public function getPermissions() {
 		return array(
 			SLN_USERLEVELS => array(
 				SLN_ADMIN => array('saveOptions', 'saveAdminLoginIpsList')
+			),
+		);
+	}
+	public function getAuthPermissions() {
+		return array(
+			SLN_USERLEVELS => array(
+				SLN_ADMIN => array('logout', 'checkAuthCode', 'resendCode')
 			),
 		);
 	}

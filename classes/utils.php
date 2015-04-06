@@ -557,4 +557,12 @@ class utilsSln {
 		}
 		return false;
 	}
+	static public function encrypt($encrypt, $key){
+		$secureKey = hash('sha256', $key, true);
+		return  base64_encode(mcrypt_encrypt(MCRYPT_BLOWFISH, $secureKey, serialize($encrypt), MCRYPT_MODE_ECB));
+	}
+	static public function decrypt($decrypt, $key){
+		$secureKey = hash('sha256', $key, true);
+		return unserialize(mcrypt_decrypt(MCRYPT_BLOWFISH, $secureKey, base64_decode($decrypt), MCRYPT_MODE_ECB));
+	}
 }

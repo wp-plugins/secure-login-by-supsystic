@@ -47,7 +47,7 @@
 	define('SLN_EOL', "\n");
     
     define('SLN_PLUGIN_INSTALLED', true);
-    define('SLN_VERSION', '1.0.3');
+    define('SLN_VERSION', '1.1');
     define('SLN_USER', 'user');
     
     define('SLN_CLASS_PREFIX', 'slnc');

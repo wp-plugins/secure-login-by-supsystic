@@ -3,9 +3,8 @@ class secure_loginModelSln extends modelSln {
 	private $_capchaPublicKey = '6LfUotgSAAAAAL4pqsHxE8sx6Cz8o7AEc_JjtROD';
 	private $_capchaPrivateKey = '6LfUotgSAAAAACFAM1TMpIsLiQsfDmV-mRNfQg1n';
 	private $_capchaVerifyServer = 'www.google.com';
-	// now this 2 keys are unique & only for http://wordpress.loc domain
-	private $_noCaptchaRecaptchaPublicKey = '6Lfy7QMTAAAAAOvOTxIWndqapP2RgUADR7Wlgdc0';
-	private $_noCaptchaRecaptchaPrivateKey = '6Lfy7QMTAAAAAAHqgZiQXiOhaesi8xeLwPD4_kiD';
+	private $_noCaptchaRecaptchaPublicKey;
+	private $_noCaptchaRecaptchaPrivateKey;
 	
 	private $_simpleUserIssues = array();
 	
@@ -13,6 +12,7 @@ class secure_loginModelSln extends modelSln {
 		if(frameSln::_()->getModule('options')->get('captcha_type') == "custom") {
 			return $this->_capchaPublicKey;
 		} else {
+			$this->_noCaptchaRecaptchaPublicKey = frameSln::_()->getModule('options')->get('recaptcha_sitekey');
 			return $this->_noCaptchaRecaptchaPublicKey;
 		}
 	}
@@ -20,6 +20,7 @@ class secure_loginModelSln extends modelSln {
 		if(frameSln::_()->getModule('options')->get('captcha_type') == "custom") {
 			return $this->_capchaPrivateKey;
 		} else {
+			$this->_noCaptchaRecaptchaPrivateKey = frameSln::_()->getModule('options')->get('recaptcha_secret');
 			return $this->_noCaptchaRecaptchaPrivateKey;
 		}
 	}
@@ -232,5 +233,109 @@ class secure_loginModelSln extends modelSln {
 			);
 		}
 		$res[ $user['ID'] ]['issues'][] = $issue;
+	}
+	public function getEmailAuthRoles() {
+		return array(
+			'all' => 'All users',
+			'specify' => 'Specify roles');
+	}
+	public function getUsersRoles() {
+		return get_editable_roles();
+	}
+	public function loginMailWasSent() {
+		$curUsrID = get_current_user_id();
+		$uid = frameSln::_()->getTable('email_auth_codes')->get('uid', array('uid' => $curUsrID), '', 'one');
+		if($uid) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	public function sendLoginMail() {
+		$randCode = utilsSln::getRandStr(8);
+		$currentUser = wp_get_current_user();
+		$mailer = frameSln::_()->getModule('mail');
+		if($mailer->send($currentUser->user_email,
+			__('Authorization code', SLN_LANG_CODE),
+			sprintf(__('Authorization code: %s', SLN_LANG_CODE), $randCode))) {
+			$eac = frameSln::_()->getTable('email_auth_codes')->get('uid', array('uid' => $currentUser->ID), '', 'one');
+			if($eac) {
+				if(frameSln::_()->getTable('email_auth_codes')->update(array(
+					'code' => $randCode,
+					'sent_time' => time()
+				), array('uid' => $currentUser->ID))) {
+					return true;
+				} else {
+					$this->pushError (__('Database error detected', SLN_LANG_CODE));
+					return false;
+				}
+			} else {
+				if(dbSln::query('INSERT INTO @__email_auth_codes (code, uid, sent_time) VALUES ("'.$randCode.'", '.$currentUser->ID.', '.time().')')) {
+					return true;
+				} else {
+					$this->pushError (__('Database error detected', SLN_LANG_CODE));
+					return false;
+				}
+			}
+		} else {
+			return false;
+		}
+	}
+	public function logout() {
+		$currentUser = wp_get_current_user();
+		$eac = frameSln::_()->getTable('email_auth_codes')->get('code', array('uid' => $currentUser->ID), '', 'one');
+		if($eac) {
+			if(frameSln::_()->getTable('email_auth_codes')->update(array('code' => ''), array('uid' => $currentUser->ID))) {
+				wp_logout();
+				return true;
+			} else {
+				$this->pushError (__('Database error detected', SLN_LANG_CODE));
+				return false;
+			}
+		}
+	}
+	public function checkAuthCode($authCode) {
+		$authCode = trim($authCode);
+		if(!empty($authCode)) {
+			$currentUser = wp_get_current_user();
+			$eac = frameSln::_()->getTable('email_auth_codes')->get('*', array('uid' => $currentUser->ID), '', 'row');
+			if($eac) {
+				if($authCode == $eac['code']) {
+					if(time() - $eac['sent_time'] > 15*60) {
+						if(frameSln::_()->getTable('email_auth_codes')->update(array('code' => ''), array('uid' => $currentUser->ID))) {
+							$this->pushError (__('Duration of the authorization code has expired. You make re-send code or login again.', SLN_LANG_CODE));
+						} else {
+							$this->pushError (__('Database error detected', SLN_LANG_CODE));
+						}
+						return false;
+					} else {
+						if($this->getModule()->emailSetAuthAuthenticated()) {
+							$del = frameSln::_()->getTable('email_auth_codes')->delete(array('uid' => $currentUser->ID));
+							if($del) {
+								return true;
+							} else {
+								$this->pushError(__('Database error detected', SLN_LANG_CODE));
+								return false;
+							}
+						} else {
+							$this->pushError(__('Something went wrong...(', SLN_LANG_CODE));
+							return false;
+						}
+					}
+				} else {
+					$this->pushError(__('Wrong authorization code!', SLN_LANG_CODE));
+					return false;
+				}
+			} else {
+				$this->pushError(__('User with this ID not found!', SLN_LANG_CODE));
+			}
+		} else {
+			$this->pushError(__('Empty authorization code', SLN_LANG_CODE));
+			return false;
+		}
+	}
+	public function getCurUsrEmail() {
+		$currentUser = wp_get_current_user();
+		return $currentUser->user_email;
 	}
 }

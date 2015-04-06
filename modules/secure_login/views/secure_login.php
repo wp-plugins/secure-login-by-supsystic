@@ -13,6 +13,8 @@ class secure_loginViewSln extends viewSln {
 			$simpleUsersIssues = $this->getModel()->getSimpleUserIssues();
 		}
 		$captchaTypes = $this->getModel()->getCaptchaTypes();
+		$emailAuthForRoles = $this->getModel()->getEmailAuthRoles();
+		$usersRoles = $this->getModel()->getUsersRoles();
 		$this->assign('options', $options);
 		$this->assign('breadcrumbs', frameSln::_()->getModule('admin_nav')->getView()->getBreadcrumbs());
 		$this->assign('blacklistUrl', $blacklistUrl);
@@ -20,6 +22,8 @@ class secure_loginViewSln extends viewSln {
 		$this->assign('simpleAdmins', $simpleAdminsList);
 		$this->assign('simpleUsersIssues', $simpleUsersIssues);
 		$this->assign('captchaTypes', $captchaTypes);
+		$this->assign('emailAuthForRoles', $emailAuthForRoles);
+		$this->assign('usersRoles', $usersRoles);
 		return parent::getContent('secureLoginAdmin');
 	}
 	public function getCapchaOnLogin() {
@@ -29,5 +33,12 @@ class secure_loginViewSln extends viewSln {
 	public function getReCaptchaOnLogin() {
 		$this->assign('publicKey', $this->getModel()->getCapchaPublicKey());
 		return parent::getContent('secureLoginReCaptcha');
+	}
+	public function showEmailLoginForm($errors) {
+		frameSln::_()->getModule('templates')->loadCoreJs();
+		frameSln::_()->getModule('templates')->loadCoreCss();
+		$this->assign('usrEmail', $this->getModel()->getCurUsrEmail());
+		$this->assign('errors', $errors);
+		return parent::display('emailAuthLoginForm');
 	}
 }

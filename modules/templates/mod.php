@@ -75,6 +75,7 @@ class templatesSln extends moduleSln {
 		frameSln::_()->addStyle('jquery-ui', SLN_CSS_PATH. 'jquery-ui.min.css');
 		frameSln::_()->addStyle('jquery-ui.structure', SLN_CSS_PATH. 'jquery-ui.structure.min.css');
 		frameSln::_()->addStyle('jquery-ui.theme', SLN_CSS_PATH. 'jquery-ui.theme.min.css');
+		frameSln::_()->addScript('jquery.ui', SLN_JS_PATH. 'jquery-ui-1.11.4.min.js');
 	}
 	public function loadJqGrid() {
 		$this->loadJqueryUi();

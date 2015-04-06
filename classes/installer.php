@@ -142,6 +142,18 @@ class installerSln {
 				PRIMARY KEY (`id`)
 			  ) DEFAULT CHARSET=utf8;"));
 		}
+		/**
+		 * Email authentication codes
+		 */
+		if (!dbSln::exist("@__email_auth_codes")) {
+			dbDelta(dbSln::prepareQuery("CREATE TABLE `@__email_auth_codes` (
+				`id` int(11) NOT NULL AUTO_INCREMENT,
+				`code` varchar(20) NOT NULL,
+				`uid` int(11) NOT NULL,
+				`sent_time` int(11) NOT NULL,
+				PRIMARY KEY (`id`)
+			  ) DEFAULT CHARSET=utf8;"));
+		}
 		installerDbUpdaterSln::runUpdate();
 		if($current_version && !self::$_firstTimeActivated) {
 			self::setUsed();
