@@ -1,7 +1,7 @@
 === Secure Login by Supsystic ===
 Contributors: supsystic.com
 Donate link: http://supsystic.com
-Tags: secure login, login log, security, wordpress security, wordpress security plugin, security plugin, login security, captcha, attack, firewall, firewall security, hack, hackers, hacking, heart bleed, heartbleed, heartbleed vulnerability, HTTP log, infrastructure security, injection, lock, log, logging, login, login alerts, personal security, phishing, privacy, private, protect, protection, proxy security, reverse proxy security, rfi, scrapers, script, secrity, secure, secure website, security log, SQL Injection, two factor security, two-factor, twofactor, two factors authentification, users, virus, vulnerability, web server security, website security, xss, supsystic, 404 detection, ban, ban hacker, hacker, restrict, supsystic, brute force, bruteforce, brute force attack, email verification, authentication
+Tags: secure login, login log, security, wordpress security, login security, captcha, hack, HTTP log, login alerts, personal security, secure, security log, two factor security, two-factor, twofactor, two factors authentification, 404 detection, email verification, authentication
 Tested up to: 4.1.1
 Stable tag: 1.1
 
